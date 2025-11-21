@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="container py-3 py-lg-5"> <div class="row g-3 g-lg-4 align-items-stretch">
+        
+        <div class="col-12 col-lg-5 d-flex flex-column">
+            <div class="card border-0 shadow-lg rounded-4 h-100 overflow-hidden">
+                <div class="card-body p-4 p-lg-5 d-flex flex-column justify-content-center text-center bg-white-card">
+                    
+                    <div class="mb-3 mb-lg-4">
+                        <i class="fa-solid fa-university fa-3x fa-lg-4x text-brown-dark mb-3"></i>
+                        <h2 class="fw-bold text-brown-dark h3 h2-lg">RMUTT Admission</h2>
+                        <p class="text-brown-light lead fs-6 fs-lg-4">ระบบตรวจรับเข้าและประเมินสาขาอัจฉริยะ</p>
+                    </div>
+
+                    <div class="d-grid gap-3 col-12 col-md-10 mx-auto">
+                        <a href="{% url 'ocr_upload' %}" class="btn btn-brown-primary btn-lg rounded-pill py-3 shadow-sm transition-btn">
+                            <i class="fa-solid fa-cloud-upload-alt me-2"></i> อัปโหลด ปพ.1 เพื่อตรวจ
+                        </a>
+                        <button class="btn btn-outline-brown-secondary btn-lg rounded-pill py-3" disabled>
+                            <i class="fa-solid fa-history me-2"></i> ประวัติ (เร็วๆ นี้)
+                        </button>
+                    </div>
+
+                    <div class="mt-4 mt-lg-5 text-brown-light small">
+                        <i class="fa-solid fa-shield-alt"></i> ข้อมูลของคุณถูกเก็บเป็นความลับ
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 h-100 overflow-hidden">
+                <div class="card-header bg-brown-header text-white p-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fs-6 fs-lg-5"><i class="fa-solid fa-robot me-2"></i> น้องแชทบอท Admission</h5>
+                    <span class="badge bg-warning text-dark rounded-pill" style="font-size: 0.7em;">Beta</span>
+                </div>
+                <div class="card-body p-0 bg-light-brown-body">
+                    <iframe 
+                        src="{% url 'chat_ui' %}" 
+                        class="chat-frame"
+                        title="Chatbot">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* CSS สำหรับปรับความสูง Chatbot ตามขนาดจอ */
+    .chat-frame {
+        width: 100%;
+        border: none;
+        height: 600px; /* ความสูงมาตรฐานบนคอม */
+    }
+
+    /* Media Query: สำหรับหน้าจอมือถือ (กว้างน้อยกว่า 768px) */
+    @media (max-width: 768px) {
+        .chat-frame {
+            height: 500px; /* ลดความสูงลงให้พอดีนิ้วปัด */
+        }
+        
+        /* ปรับขนาด Font ให้ไม่ล้นจอ */
+        h2 { font-size: 1.5rem; }
+        .lead { font-size: 1rem; }
+    }
+    
+    /* Media Query: สำหรับมือถือจอเล็กมาก (iPhone SE หรือรุ่นเก่า) */
+    @media (max-width: 380px) {
+        .chat-frame {
+            height: 400px;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-3">
+  <h3>ผล OCR</h3>
+  <p><strong>ชื่อ:</strong> {{ rec.extracted.student_name }}</p>
+  <p><strong>โรงเรียน:</strong> {{ rec.extracted.school }}</p>
+  <p><strong>GPAX:</strong> {{ rec.extracted.gpax }}</p>
+  <p><strong>GPAMATH:</strong> {{ rec.extracted.gpamath }}</p>
+  <p><strong>GPASCI:</strong> {{ rec.extracted.gpasci }}</p>
+  <p><strong>GPALAN:</strong> {{ rec.extracted.gpalan }}</p>
+  <a href="{% url 'admissions_evaluate' rec.pk %}" class="btn btn-primary">ตรวจคุณสมบัติและแนะนำสาขา</a>
+</div>
+{% endblock %}

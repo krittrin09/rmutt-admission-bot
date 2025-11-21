@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-3">
+  <h3>อัปโหลด ปพ.1 (ภาพ/JPG/PNG)</h3>
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <div class="mb-3"><input type="file" name="file" class="form-control" required></div>
+    <button class="btn btn-dark">Upload</button>
+  </form>
+</div>
+{% endblock %}

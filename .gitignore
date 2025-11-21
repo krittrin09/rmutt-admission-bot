@@ -1,0 +1,14 @@
+# ละเว้น Virtual Environment
+.venv/
+venv/
+env/
+
+# ละเว้นไฟล์ Compiled ของ Python
+__pycache__/
+*.pyc
+
+# ละเว้นไฟล์ Database (ถ้าไม่อยากเอาขึ้น)
+db.sqlite3
+
+# ละเว้นไฟล์ตั้งค่า Environment (ถ้ามี)
+.env

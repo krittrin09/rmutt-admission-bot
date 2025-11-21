@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-3">
+  <h3>ผลการประเมินสำหรับ {{ rec.extracted.student_name }}</h3>
+  <ul class="list-group">
+    {% for r in recommendations %}
+    <li class="list-group-item">
+      <h5>{{ r.program.name }} {% if r.passed %}<span class="badge bg-success">ผ่าน</span>{% else %}<span class="badge bg-danger">ไม่ผ่าน</span>{% endif %}</h5>
+      <p>เหตุผล: {% for x in r.reasons %} {{ x }}; {% endfor %}</p>
+      <p>{{ r.program.description }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
