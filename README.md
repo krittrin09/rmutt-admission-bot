@@ -64,4 +64,4 @@
 * `templates/`: ไฟล์ HTML หลัก
 
 ---
-**Developed by:** [ใส่ชื่อของคุณ]
+**Developed by:** Noah Krittrin
