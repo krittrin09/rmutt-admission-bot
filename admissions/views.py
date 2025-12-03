@@ -1,6 +1,5 @@
 from django.shortcuts import render, get_object_or_404
 from ocr_app.models import OCRResult
-from criteria_app.models import ProgramCriteria
 
 def evaluate_view(request, pk):
     rec = get_object_or_404(OCRResult, pk=pk)

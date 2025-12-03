@@ -9,13 +9,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-secret")
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["103.142.151.59", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://103.142.151.59:8000",  # IP เครื่อง Server คุณ (ตามรูป)
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://103.142.151.59:8000",
+]
+# 3. (เผื่อไว้) ถ้าไฟล์รูปถ่ายมือถือใหญ่มาก ให้เพิ่มขนาดไฟล์ที่รับได้
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 
 INSTALLED_APPS = [
     "django.contrib.admin","django.contrib.auth","django.contrib.contenttypes","django.contrib.sessions",
     "django.contrib.messages","django.contrib.staticfiles",
     "rest_framework",
-    "core","ocr_app","criteria_app","admissions","chatbot",
+    "ocr_app","admissions","chatbot",
 ]
 
 MIDDLEWARE = [
@@ -78,3 +87,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True

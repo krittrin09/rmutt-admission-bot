@@ -1,48 +1,56 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
-import json
 from django.views.decorators.csrf import csrf_exempt
-
-# Import RAG Engine
-# (ถ้าบรรทัดนี้ error ให้เช็คว่าไฟล์ rag_engine.py อยู่ถูกที่ไหม)
+import json
 from .rag.rag_engine import get_rag_chain
 
 def chat_ui(request):
-    """
-    ฟังก์ชันสำหรับแสดงหน้าจอ Chatbot (HTML)
-    """
+    # ลบ flush() ออกเพื่อให้จำชื่อได้
     return render(request, "chat.html")
 
+def reset_chat(request):
+    request.session.flush()
+    return redirect("/")
+
+@csrf_exempt
 def chat_api(request):
-    """
-    API สำหรับรับข้อความจาก JS และตอบกลับด้วย AI (RAG)
-    """
-    if request.method == 'POST':
-        try:
-            # 1. รับข้อความจาก JavaScript
-            data = json.loads(request.body)
-            user_message = data.get('message', '')
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=400)
 
-            # 2. เรียก RAG Engine
-            qa_chain = get_rag_chain()
-            
-            if qa_chain:
-                # ส่งคำถามไปให้ AI ตอบ
-                result = qa_chain.invoke({"query": user_message})
-                
-                # ดึงเฉพาะคำตอบออกมา (รองรับทั้ง Dictionary และ String)
-                if isinstance(result, dict):
-                    bot_response = result.get('result', '')
-                else:
-                    bot_response = str(result)
-            else:
-                bot_response = "ขออภัย ระบบ RAG ยังไม่พร้อมใช้งาน (ไม่พบ Vector DB หรือโหลด Model ไม่ได้)"
+    try:
+        data = json.loads(request.body)
+        user_message = data.get('message', '').strip()
 
-            # 3. ส่งคำตอบกลับไปเป็น JSON
-            return JsonResponse({'response': bot_response})
+        if not user_message:
+            return JsonResponse({'response': 'กรุณาพิมพ์คำถาม'})
 
-        except Exception as e:
-            print(f"Chat Error: {e}")
-            return JsonResponse({'response': f'เกิดข้อผิดพลาด: {str(e)}'}, status=500)
-    
-    return JsonResponse({'error': 'Invalid method'}, status=400)
+        # 1. โหลด Chain
+        qa_chain = get_rag_chain() 
+        if not qa_chain:
+            return JsonResponse({'response': 'ระบบกำลังปรับปรุงฐานข้อมูล (กรุณารัน Ingest)'})
+
+        # 2. ดึงข้อมูลนักเรียนจาก Session
+        student_data = request.session.get('student_data', 'ผู้ใช้ยังไม่ได้อัปโหลดใบเกรด (ตอบตามเกณฑ์ทั่วไป)')
+
+        # 3. ✅ "มัดรวม" ข้อมูลเกรด + คำถาม เป็นก้อนเดียว
+        combined_query = f"""
+        [ข้อมูลนักเรียนจากใบ ปพ.1]:
+        {student_data}
+
+        [คำถามจากผู้ใช้]:
+        {user_message}
+        """
+
+        # 4. ส่งไปแค่ "query" (ตัวเดียวจบ ไม่ error แน่นอน)
+        result = qa_chain.invoke({"query": combined_query})
+
+        if isinstance(result, dict):
+            bot_response = result.get('result') or result.get('answer') or ''
+        else:
+            bot_response = str(result)
+
+        return JsonResponse({'response': bot_response})
+
+    except Exception as e:
+        print("Chat Error:", e)
+        return JsonResponse({'response': f'เกิดข้อผิดพลาดระบบ: {str(e)}'}, status=500)

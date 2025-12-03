@@ -1,14 +1,23 @@
-# ละเว้น Virtual Environment
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment (ห้ามเอาขึ้นเด็ดขาด)
 .venv/
 venv/
 env/
 
-# ละเว้นไฟล์ Compiled ของ Python
-__pycache__/
-*.pyc
+# Environment Variables (เก็บ API Key)
+.env
 
-# ละเว้นไฟล์ Database (ถ้าไม่อยากเอาขึ้น)
+# User Uploaded Media (ประหยัดพื้นที่และรักษาความลับ User)
+media/
+!media/.gitkeep
+
+# Database (ถ้าใช้ SQLite)
 db.sqlite3
 
-# ละเว้นไฟล์ตั้งค่า Environment (ถ้ามี)
-.env
+# OS generated files
+.DS_Store
+Thumbs.db
