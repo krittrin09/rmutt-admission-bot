@@ -8,7 +8,7 @@
 
 ## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 * **Backend:** Django (Python)
-* **AI Model:** Google Gemini (via LangChain)
+* **AI Model:** qwen2.5:1.5b (via LangChain)
 * **Vector DB:** FAISS (สำหรับระบบ RAG)
 * **OCR:** Tesseract OCR + Poppler (pdf2image)
 * **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (AJAX)
