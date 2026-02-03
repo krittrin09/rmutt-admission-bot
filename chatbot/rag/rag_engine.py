@@ -1,75 +1,247 @@
 import os
-from datetime import datetime
-import pytz
+import re
+import logging
+from django.conf import settings
+
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaLLM
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-GENERAL_DB_PATH = os.path.join(BASE_DIR, "vector_db")
+logger = logging.getLogger(__name__)
 
-def get_rag_chain():
-    try:
-        # 1. วันที่ปัจจุบัน
-        thai_tz = pytz.timezone('Asia/Bangkok')
-        now = datetime.now(thai_tz)
-        current_date_str = f"{now.day}/{now.month}/{now.year+543}"
+# =====================================================
+# GLOBAL CONFIG
+# =====================================================
+DATA_FILE = os.path.join(settings.BASE_DIR, "chatbot", "rag", "data", "overview.txt")
+MODEL_NAME = "qwen2.5:1.5b"
 
-        if not os.path.exists(GENERAL_DB_PATH):
-            print("❌ ไม่พบ Database หลัก")
-            return None
+_VECTOR_DB = None
+_EMBEDDINGS = None
+_LLM = None
+_LAST_MTIME = 0
 
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        vectorstore = FAISS.load_local(GENERAL_DB_PATH, embeddings, allow_dangerous_deserialization=True)
-        
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash", 
-            google_api_key="AIzaSyDAcHGUbyeYbohdBd5os08nXn_9BduhtyM".strip(), # ⚠️ อย่าลืมใส่ API Key ของคุณที่นี่
-            temperature=0.1
+ROUND_ORDER_LIST = [
+    "รอบที่ 1 Portfolio",
+    "รอบที่ 1.2 Portfolio (MOU)",
+    "รอบที่ 2 Quota",
+    "รอบที่ 3 Admission",
+    "รอบที่ 4 Direct Admission",
+]
+
+# คำใกล้เคียง (semantic เบา ๆ ไม่ fix แข็ง)
+SYNONYM_MAP = {
+    "รับกี่คน": ["จำนวนรับ", "รับ", "โควต้า"],
+    "สมัคร": ["ยื่น", "ยื่นได้", "ยื่นได้ไหม"],
+    "สาขา": ["หลักสูตร", "โปรแกรม"],
+    "รอบ": ["portfolio", "quota", "admission"],
+}
+
+# =====================================================
+# INIT MODELS & DB
+# =====================================================
+def get_embeddings():
+    global _EMBEDDINGS
+    if _EMBEDDINGS is None:
+        _EMBEDDINGS = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
+    return _EMBEDDINGS
 
-        # 2. ⭐ แก้ไข Prompt: ลบตัวแปร {student_data} ออกจาก input_variables
-        # แต่ยังคงไว้ใน string template เพราะเราจะยัด text เข้าไปใน {question} แทน
-        template = f"""
-        คุณเป็นเจ้าหน้าที่แนะแนวประจำ "คณะวิทยาศาสตร์และเทคโนโลยี" มทร.ธัญบุรี
-        
-        [ข้อมูลปัจจุบัน]
-        - วันที่: {current_date_str}
-        
-        [ระเบียบการรับสมัคร (อ้างอิง)]
-        {{context}}
 
-        [ข้อมูลผู้สมัครและคำถาม]
-        {{question}}
-        
-        [คำสั่งการตอบ]
-        1. ให้วิเคราะห์ "ข้อมูลนักเรียน" (ที่แนบมาในคำถาม) เทียบกับ "ระเบียบการ" อย่างละเอียด
-        2. ถ้าเกรดถึงเกณฑ์ ให้บอกว่า "สามารถสมัครได้" พร้อมระบุชื่อสาขา
-        3. ถ้าเกรดไม่ถึง ให้บอกสาเหตุชัดเจน (เช่น เกรดคณิตต่ำกว่าเกณฑ์)
-        4. หากผู้ใช้ถามเรื่องทั่วไป ให้ตอบตามระเบียบการ
-        5. ใช้ภาษาที่เป็นกันเอง กระชับ
-        6. ⚠️ **การจัดรูปแบบ:** - ห้ามนำตัวเลขข้อเดิมจากเอกสารมาตอบ (เช่น ห้ามตอบว่า '3. สาขา...') 
-           - ให้ใช้ **Bullet Points (-)** แทนตัวเลขเสมอ เพื่อความสวยงาม
-           - หรือถ้าระบุเป็นลำดับ ให้นับ 1, 2, 3 ใหม่เอง ห้ามข้ามเลข
-        """
-        
-        QA_CHAIN_PROMPT = PromptTemplate(
-            # ✅ จุดสำคัญ: ต้องเหลือแค่ context และ question เท่านั้น ห้ามมี student_data
-            input_variables=["context", "question"],
-            template=template,
+def get_llm(fast=False):
+    global _LLM
+    if _LLM is None:
+        _LLM = OllamaLLM(
+            model=MODEL_NAME,
+            temperature=0.3,
+            num_ctx=2048 if fast else 4096,
+            num_predict=256 if fast else 512
         )
+    return _LLM
 
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            retriever=vectorstore.as_retriever(search_kwargs={"k": 15}),
-            return_source_documents=False,
-            chain_type_kwargs={"prompt": QA_CHAIN_PROMPT} 
-        )
-        
-        return qa_chain
 
-    except Exception as e:
-        print(f"❌ RAG Engine Error: {e}")
+def load_vector_db():
+    global _VECTOR_DB, _LAST_MTIME
+    if not os.path.exists(DATA_FILE):
         return None
+
+    current_mtime = os.path.getmtime(DATA_FILE)
+    if _VECTOR_DB is None or current_mtime > _LAST_MTIME:
+        reload_vector_db()
+    return _VECTOR_DB
+
+
+def reload_vector_db():
+    global _VECTOR_DB, _LAST_MTIME
+    try:
+        embeddings = get_embeddings()
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            text = f.read()
+
+        docs = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100
+        ).create_documents([text])
+
+        _VECTOR_DB = FAISS.from_documents(docs, embeddings)
+        _LAST_MTIME = os.path.getmtime(DATA_FILE)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+# =====================================================
+# PROFILE & HELPERS
+# =====================================================
+def has_student_data(profile):
+    return profile.get("gpax", 0) > 0
+
+
+def expand_query(question):
+    q = question.lower()
+    expanded = [q]
+    for k, syns in SYNONYM_MAP.items():
+        if k in q:
+            expanded.extend(syns)
+    return " ".join(expanded)
+
+
+def get_student_profile(history):
+    profile = {
+        "gpax": 0.0,
+        "name": "น้อง",
+        "math_credit": 0.0,
+        "sci_credit": 0.0,
+        "eng_credit": 0.0,
+        "raw": ""
+    }
+
+    if not history:
+        return profile
+
+    for msg in reversed(history):
+        if msg.get("role") == "system" and "[DATA_START]" in msg.get("content", ""):
+            c = msg["content"]
+
+            def ext(r):
+                m = re.search(r, c)
+                return float(m.group(1)) if m else 0.0
+
+            profile.update({
+                "gpax": ext(r"GPAX:\s*([\d\.]+)"),
+                "math_credit": ext(r"MATH_CREDIT:\s*([\d\.]+)"),
+                "sci_credit": ext(r"SCI_CREDIT:\s*([\d\.]+)"),
+                "eng_credit": ext(r"ENG_CREDIT:\s*([\d\.]+)"),
+                "name": re.search(r"ชื่อ:\s*([^\s]+)", c).group(1) if re.search(r"ชื่อ:\s*([^\s]+)", c) else "น้อง",
+                "raw": c
+            })
+            break
+
+    return profile
+
+
+def format_card_pretty(text, profile):
+    prog = re.search(r"หลักสูตร:\s*(.+)", text)
+    if not prog:
+        return None, False, ""
+
+    p_name = prog.group(1).strip()
+
+    m_gpa = re.search(r"GPAX ขั้นต่ำ:\s*([\d\.]+)", text)
+    gpa_req = float(m_gpa.group(1)) if m_gpa else 0.0
+
+    # 🔥 สำคัญ: ถ้าไม่มีข้อมูลนักเรียน → ไม่ filter GPAX
+    if has_student_data(profile) and profile["gpax"] < gpa_req:
+        return None, False, ""
+
+    code = re.search(r"รหัสสาขา:\s*(\w+)", text)
+    seats = re.search(r"จำนวนรับ:\s*(\d+)", text)
+
+    card = (
+        f"🎓 **{p_name}**\n"
+        f"🆔 รหัส: `{code.group(1) if code else '-'}` | "
+        f"👥 รับ: **{seats.group(1) if seats else '-'}** คน\n"
+        f"⭐ GPAX ขั้นต่ำ: `{gpa_req}`"
+    )
+
+    return card, True, p_name
+
+
+# =====================================================
+# MAIN
+# =====================================================
+def ask_balanced(question: str, history: list = None) -> str:
+    db = load_vector_db()
+    if not db:
+        return "⚠️ ระบบยังไม่พร้อมใช้งาน"
+
+    profile = get_student_profile(history)
+    search_q = expand_query(question)
+
+    # 🔥 ไม่มีข้อมูล → ลด k เพื่อความเร็ว
+    k = 8 if not has_student_data(profile) else 25
+    docs = db.similarity_search(search_q, k=k)
+
+    grouped = {r: [] for r in ROUND_ORDER_LIST}
+    seen_cards = set()
+    unique_majors = set()
+    context_buffer = ""
+
+    for d in docs:
+        content = d.page_content
+        context_buffer += content + "\n"
+
+        found_round = None
+        for r in ROUND_ORDER_LIST:
+            if r.split()[0] in content and r.split()[2] in content:
+                found_round = r
+                break
+
+        if not found_round:
+            continue
+
+        card, ok, pname = format_card_pretty(content, profile)
+        if ok and card and card not in seen_cards:
+            seen_cards.add(card)
+            grouped[found_round].append(card)
+            unique_majors.add(pname)
+
+    # ==========================
+    # FAST PATH (ไม่ใช้ LLM)
+    # ==========================
+    if unique_majors:
+        header = (
+            f"✨ **สรุปข้อมูลที่พบ**\n"
+            f"👤 ผู้สมัคร: {profile['name']}\n"
+        )
+
+        if has_student_data(profile):
+            header += f"📊 GPAX: `{profile['gpax']}`\n"
+
+        output = [header]
+
+        for r in ROUND_ORDER_LIST:
+            if grouped[r]:
+                output.append(f"\n### 📍 {r}")
+                output.append("\n\n".join(grouped[r]))
+
+        return "\n".join(output).strip()
+
+    # ==========================
+    # LLM FALLBACK (จำเป็นจริง)
+    # ==========================
+    llm = get_llm(fast=True)
+    prompt = f"""
+คุณคือรุ่นพี่แนะแนวการศึกษาคณะวิทยาศาสตร์
+ข้อมูลที่มีจากระเบียบการ:
+{context_buffer[:1200]}
+
+ตอบคำถามให้น้องอย่างสุภาพ เป็นกันเอง ถ้าไม่ชัดเจนให้สรุปตามข้อมูลที่มี
+"""
+
+    try:
+        return llm.invoke(f"{prompt}\nคำถาม: {question}").strip()
+    except:
+        return "❌ ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง"

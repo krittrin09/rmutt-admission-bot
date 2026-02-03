@@ -1,0 +1,57 @@
+Test Back OCR
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Back OCR</title>
+</head>
+<body>
+
+  <h2>ทดสอบ Back OCR Pipeline</h2>
+
+  <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" />
+  <br><br>
+  <button onclick="upload()">Upload & Run OCR</button>
+
+  <pre id="result"
+       style="margin-top:20px;
+              background:#111;
+              color:#0f0;
+              padding:12px;
+              max-height:400px;
+              overflow:auto;
+              display:none;">
+  </pre>
+
+<script>
+async function upload() {
+  const fileInput = document.getElementById("fileInput");
+  if (!fileInput.files.length) {
+    alert("เลือกไฟล์ก่อน");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  const res = await fetch("/ocr/ocr/back", {
+    method: "POST",
+    body: formData
+  });
+
+  const text = await res.text();
+
+  try {
+    const json = JSON.parse(text);
+    document.getElementById("result").textContent =
+      JSON.stringify(json, null, 2);
+  } catch (e) {
+    document.getElementById("result").textContent =
+      "❌ ไม่ใช่ JSON:\n\n" + text;
+  }
+}
+</script>
+
+</body>
+</html>

@@ -3,6 +3,8 @@
 {% block title %}RMUTT CSI Admission{% endblock %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <style>
     /* ================= THEME VARIABLES ================= */
     :root {
@@ -40,12 +42,31 @@
         flex-shrink: 0; z-index: 1000;
     }
     .brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+    
     .btn-reset {
         background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);
         padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; text-decoration: none;
         display: flex; align-items: center; gap: 5px; transition: 0.2s;
     }
     .btn-reset:hover { background: rgba(255,255,255,0.3); color: white; }
+    
+    .btn-admin {
+        background: rgba(255, 215, 0, 0.2);
+        color: #FFD700;
+        border: 1px solid rgba(255, 215, 0, 0.5);
+        padding: 5px 15px; 
+        border-radius: 20px; 
+        font-size: 0.85rem; 
+        text-decoration: none;
+        display: flex; align-items: center; gap: 5px; transition: 0.2s;
+    }
+    .btn-admin:hover { 
+        background: rgba(255, 215, 0, 0.4); 
+        color: white; 
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+
+    .navbar-actions { display: flex; gap: 10px; align-items: center; }
 
     /* Main Wrapper */
     .main-wrapper {
@@ -62,13 +83,36 @@
         box-shadow: 0 4px 20px rgba(0,0,0,0.03);
         height: 100%; overflow-y: auto;
     }
-    .upload-zone {
-        width: 100%; background-color: #fafafa; border: 2px dashed #ccc; border-radius: 12px;
-        padding: 30px 20px; text-align: center; margin: 20px 0; transition: 0.3s; cursor: pointer;
+
+    /* New Upload Styles */
+    .upload-group {
+        width: 100%; display: flex; flex-direction: column; gap: 15px; margin: 20px 0;
     }
-    .upload-zone:hover { border-color: var(--primary); background-color: #fffbf5; }
-    .btn-upload-sidebar { background: var(--primary); color: white; width: 100%; padding: 10px; border: none; border-radius: 50px; margin-top: 15px; }
+    .btn-file {
+        border: 2px dashed #ccc; color: #555; background-color: #fafafa;
+        padding: 20px; border-radius: 12px; font-size: 0.95rem; font-weight: bold;
+        width: 100%; cursor: pointer; transition: 0.3s;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        box-sizing: border-box;
+    }
+    .btn-file:hover, .btn-file.has-file {
+        border-color: var(--primary); color: var(--primary); background-color: #fffbf5;
+    }
+    .btn-file.has-file {
+        border-style: solid; background-color: #f1f8e9; color: #2e7d32; border-color: #2e7d32;
+    }
     
+    .btn-process {
+        background: var(--primary); color: white; width: 100%; padding: 15px;
+        border: none; border-radius: 50px; font-size: 1rem; font-weight: bold;
+        cursor: pointer; transition: 0.3s; opacity: 0.5; pointer-events: none;
+        margin-top: 10px;
+    }
+    .btn-process.ready {
+        opacity: 1; pointer-events: auto; box-shadow: 0 4px 15px rgba(110, 59, 11, 0.3);
+    }
+    .btn-process:hover { background: var(--primary-dark); }
+
     .steps-info { margin-top: auto; width: 100%; display: flex; justify-content: space-around; background: #f8f9fa; padding: 15px; border-radius: 10px; font-size: 0.8rem; color: var(--gray-text); }
     .step-box { text-align: center; } .step-box i { display: block; font-size: 1.2rem; color: var(--primary); margin-bottom: 5px; }
 
@@ -143,17 +187,26 @@
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .full-width { grid-column: span 2; }
     .form-group label { font-size: 0.85rem; font-weight: 700; color: #555; margin-bottom: 5px; display: block; }
-    .form-control { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; width: 100%; }
+    .form-control { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; width: 100%; box-sizing: border-box; }
     .section-title { grid-column: span 2; font-size: 0.95rem; color: var(--primary); font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 15px; margin-bottom: 5px; }
     
     #loadingSpinner { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 15px; z-index: 2001; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
 </style>
 
 <div class="top-navbar">
-    <div class="brand"><i class="fa-solid fa-university"></i> RMUTT Admission</div>
-    <a href="{% url 'reset_chat' %}" class="btn-reset" onclick="return confirm('ต้องการล้างข้อมูลเริ่มใหม่?');">
-        <i class="fa-solid fa-rotate-right"></i> เริ่มใหม่
-    </a>
+    <div class="brand">
+        <i class="fa-solid fa-university"></i> RMUTT Admission
+    </div>
+
+    <div class="navbar-actions">
+        <a href="/criteria/manage/" class="btn-admin" title="แก้ไขข้อมูลเกณฑ์ (Admin)">
+            <i class="fa-solid fa-user-gear"></i> จัดการข้อมูล
+        </a>
+
+        <a href="{% url 'reset_chat' %}" class="btn-reset" onclick="return confirm('ต้องการล้างข้อมูลเริ่มใหม่?');">
+            <i class="fa-solid fa-rotate-right"></i> เริ่มใหม่
+        </a>
+    </div>
 </div>
 
 <div class="main-wrapper">
@@ -166,18 +219,30 @@
             <small class="text-muted">ระบบตรวจสอบคุณสมบัติ AI</small>
         </div>
 
-        <div class="upload-zone" onclick="triggerUpload()">
-            <i class="fa-solid fa-cloud-arrow-up fa-3x text-secondary mb-3"></i>
-            <h6 class="fw-bold m-0">อัปโหลดใบ ปพ.1</h6>
-            <small class="text-muted">รองรับ PDF, JPG, PNG</small>
-            <button class="btn-upload-sidebar">เลือกไฟล์จากเครื่อง</button>
+        <div class="upload-group">
+            <div class="upload-btn-wrapper" style="width:100%">
+                <div class="btn-file" id="btnFront" onclick="document.getElementById('fileFront').click()">
+                    <i class="fa-solid fa-file-image fa-lg"></i> เลือกด้านหน้า (Front)
+                </div>
+                <input type="file" id="fileFront" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" onchange="updateFileStatus('Front')">
+            </div>
+            <button id="btnRunFront" disabled onclick="runFrontOCR()">Run Front</button>
+            <div class="upload-btn-wrapper" style="width:100%">
+                <div class="btn-file" id="btnBack" onclick="document.getElementById('fileBack').click()">
+                    <i class="fa-solid fa-file-lines fa-lg"></i> เลือกด้านหลัง (Back)
+                </div>
+                <input type="file" id="fileBack" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" onchange="updateFileStatus('Back')">
+            </div>
+            <button id="btnRunBack"  disabled onclick="runBackOCR()">Run Back</button>
+
+            <button class="btn-process" id="btnProcess" onclick="uploadBothFiles()">
+                <i class="fa-solid fa-microchip"></i> เริ่มประมวลผล AI
+            </button>
         </div>
 
-        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" onchange="handleFileSelect()">
-
         <div class="steps-info">
-            <div class="step-box"><i class="fa-solid fa-file-import"></i>1. อัปโหลด</div>
-            <div class="step-box"><i class="fa-solid fa-microchip"></i>2. ประมวลผล</div>
+            <div class="step-box"><i class="fa-solid fa-images"></i>1. เลือก 2 ไฟล์</div>
+            <div class="step-box"><i class="fa-solid fa-upload"></i>2. อัปโหลด</div>
             <div class="step-box"><i class="fa-solid fa-comments"></i>3. พูดคุย</div>
         </div>
     </div>
@@ -187,7 +252,7 @@
             <div class="d-flex align-items-center gap-2">
                 <i class="fa-solid fa-robot text-warning" style="font-size: 1.5rem;"></i>
                 <div>
-                    <h6 class="m-0 fw-bold">น้องแชทบอท</h6>
+                    <h6 class="m-0 fw-bold">Gaku Chatbot</h6>
                     <small class="text-success" style="font-size: 0.75rem;">● ออนไลน์</small>
                 </div>
             </div>
@@ -203,17 +268,25 @@
                     {% else %}
                         สวัสดีครับ!
                     {% endif %}
-                    น้องแชทบอท Admission ยินดีให้บริการครับ<br>
-                    <small class="text-muted">(กรุณาอัปโหลดใบ ปพ.1 เพื่อให้ช่วยวิเคราะห์)</small>
+                    น้อง Gaku Chatbot ยินดีให้บริการครับ<br>
+                    
+                    {% if initial_info %}
+                        <hr>
+                        <strong>📅 กำหนดการรับสมัครล่าสุด:</strong><br>
+                        <span style="white-space: pre-line;">{{ initial_info }}</span>
+                        <hr>
+                    {% endif %}
+
+                    <small class="text-muted">(กรุณาอัปโหลดใบ ปพ.1 ทั้งหน้าและหลัง เพื่อให้ช่วยวิเคราะห์)</small>
                 </div>
             </div>
         </div>
 
         <div class="input-section">
-            <button class="btn-mobile-upload" onclick="triggerUpload()">
+            <button class="btn-mobile-upload" onclick="openUploadPopup()">
                 <i class="fa-solid fa-paperclip"></i>
             </button>
-
+            
             <input type="text" id="userInput" class="chat-input" placeholder="พิมพ์คำถามของคุณ..." onkeypress="handleEnter(event)">
             
             <button class="btn-send" onclick="sendMessage()">
@@ -240,6 +313,11 @@
             <div class="full-width form-group">
                 <label>ชื่อ-นามสกุล:</label>
                 <input type="text" id="inpName" class="form-control">
+            </div>
+
+            <div class="full-width form-group">
+                <label>โรงเรียน:</label>
+                <input type="text" id="inpSchool" class="form-control" placeholder="เช่น โรงเรียนสวนกุหลาบวิทยาลัย">
             </div>
 
             <div class="full-width form-group">
@@ -291,200 +369,387 @@
         <button class="btn btn-success btn-sm rounded-pill px-4" id="btnConfirm" onclick="confirmData()">ยืนยันข้อมูล</button>
     </div>
 </div>
+<div id="uploadOverlay" onclick="closeUploadPopup()" style="
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+    z-index:3000;">
+</div>
+
+<div id="uploadPopup" style="
+    display:none; position:fixed; left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    width:min(92vw, 420px);
+    background:#fff; border-radius:16px; z-index:3001;
+    box-shadow:0 12px 40px rgba(0,0,0,.25);
+    overflow:hidden;">
+  
+    <div style="padding:14px 16px; background:#f8f9fa; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-weight:800;">อัปโหลด ปพ.1</div>
+    <button type="button" onclick="closeUploadPopup()" style="border:none;background:transparent;font-size:20px;line-height:1;">✕</button>
+  </div>
+
+  <div style="padding:16px;">
+    <!-- เหมือน PC -->
+    <div class="upload-group" style="margin:0; gap:12px;">
+      
+      <div class="btn-file" onclick="document.getElementById('fileFront').click()">
+        <i class="fa-solid fa-file-image fa-lg"></i> เลือกด้านหน้า (Front)
+      </div>
+      <button id="popupRunFront" disabled onclick="runFrontOCR()" style="width:100%;">Run Front</button>
+
+      <div class="btn-file" onclick="document.getElementById('fileBack').click()">
+        <i class="fa-solid fa-file-lines fa-lg"></i> เลือกด้านหลัง (Back)
+      </div>
+      <button id="popupRunBack" disabled onclick="runBackOCR()" style="width:100%;">Run Back</button>
+
+      <button class="btn-process" id="popupProcess" onclick="uploadBothFiles()" style="margin-top:6px;">
+        <i class="fa-solid fa-microchip"></i> เริ่มประมวลผล AI
+      </button>
+
+    </div>
+  </div>
+</div>
 
 <script>
-    function getCookie(name) {
-        let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-        return v ? v[2] : null;
+function getCookie(name) {
+    let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+
+/* ---------- NEW UPLOAD LOGIC ---------- */
+let fileFrontObj = null;
+let fileBackObj = null;
+function openUploadPopup() {
+    document.getElementById('uploadOverlay').style.display = 'block';
+    document.getElementById('uploadPopup').style.display = 'block';
+    syncPopupButtons();
+}
+
+function closeUploadPopup() {
+    document.getElementById('uploadOverlay').style.display = 'none';
+    document.getElementById('uploadPopup').style.display = 'none';
+}
+
+function syncPopupButtons() {
+    const runFront = document.getElementById('popupRunFront');
+    const runBack  = document.getElementById('popupRunBack');
+    const proc     = document.getElementById('popupProcess');
+
+    if (runFront) runFront.disabled = !fileFrontObj;
+    if (runBack)  runBack.disabled  = !fileBackObj;
+
+  // ปุ่มเริ่มประมวลผล AI ใน popup: สว่างเมื่อมีไฟล์อย่างน้อย 1 ไฟล์
+    if (proc) {
+        if (fileFrontObj || fileBackObj) proc.classList.add('ready');
+        else proc.classList.remove('ready');
+    }
+}
+function updateFileStatus(side) {
+    const input = document.getElementById(`file${side}`);
+    const file = input.files[0];
+
+    if (!file) return;
+
+    if (side === 'Front') {
+        fileFrontObj = file;
+        document.getElementById('btnRunFront').disabled = false;
     }
 
-    // Typing Bubble
-    function showTyping() {
-        const box = document.getElementById('chatBox');
-        const div = document.createElement('div');
-        div.className = 'msg bot';
-        div.id = 'typingBubble';
-        div.innerHTML = `
-            <div class="avatar"><i class="fa-solid fa-robot"></i></div>
-            <div class="bubble text-muted" style="font-style:italic;">
-                <i class="fa-solid fa-circle-notch fa-spin"></i> กำลังพิมพ์...
-            </div>`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+    if (side === 'Back') {
+        fileBackObj = file;
+        document.getElementById('btnRunBack').disabled = false;
     }
 
-    function hideTyping() {
-        const el = document.getElementById('typingBubble');
-        if (el) el.remove();
+    const targetBtn = document.getElementById(`btn${side}`);
+    targetBtn.classList.add('has-file');
+    targetBtn.innerHTML =
+        `<i class="fa-solid fa-check-circle"></i> ${side}: ${file.name.substring(0, 12)}...`;
+
+    const btnProcess = document.getElementById('btnProcess');
+    if (fileFrontObj || fileBackObj) {
+        btnProcess.classList.add('ready');
     }
 
-    // Chat Logic
-    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+    syncPopupButtons();
+}
 
-    function appendMessage(text, sender) {
-        const box = document.getElementById('chatBox');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `msg ${sender}`;
-        
-        let content = text;
-        if (sender === 'bot') content = marked.parse(text);
 
-        let avatarHtml = sender === 'bot' ? '<div class="avatar"><i class="fa-solid fa-robot"></i></div>' : '';
-        msgDiv.innerHTML = `${avatarHtml}<div class="bubble">${content}</div>`;
-        
-        // Link config
-        msgDiv.querySelectorAll('a').forEach(a => {
-            a.setAttribute('target', '_blank');
-            if(sender === 'user') a.style.color = 'white';
+
+
+async function uploadBothFiles() {
+    
+    if (!fileFrontObj && !fileBackObj) {
+    alert("กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์");
+    return;
+    }
+
+    const formData = new FormData();
+    if (fileFrontObj) formData.append('front_file', fileFrontObj);
+    if (fileBackObj) formData.append('back_file', fileBackObj);
+    try {
+        const response = await fetch("{% url 'extract_ocr' %}", { 
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
         });
 
-        box.appendChild(msgDiv);
-        box.scrollTop = box.scrollHeight;
-    }
+        const data = await response.json();
 
-    async function sendMessage() {
-        const input = document.getElementById('userInput');
-        const btnSend = document.querySelector('.btn-send');
-        const msg = input.value.trim();
-        
-        if (!msg) return;
-
-        btnSend.disabled = true;
-        input.disabled = true;
-
-        appendMessage(msg, 'user');
-        input.value = '';
-
-        showTyping();
-
-        try {
-            const res = await fetch("{% url 'chat_api' %}", {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({ message: msg })
-            });
-            const data = await res.json();
-            
-            hideTyping();
-            appendMessage(data.response, 'bot');
-
-        } catch (err) {
-            hideTyping();
-            appendMessage("⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ", 'bot');
-        } finally {
-            btnSend.disabled = false;
-            input.disabled = false;
-            input.focus();
-        }
-    }
-
-    // Upload Logic
-    function triggerUpload() { document.getElementById('fileInput').click(); }
-
-    async function handleFileSelect() {
-        const fileInput = document.getElementById('fileInput');
-        if (fileInput.files.length === 0) return;
-
-        document.getElementById('overlay').style.display = 'block';
-        document.getElementById('loadingSpinner').style.display = 'block';
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 300000);
-
-        try {
-            const res = await fetch("/ocr/upload/", { 
-                method: 'POST', 
-                body: formData,
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const resp = await res.json();
-
-            document.getElementById('loadingSpinner').style.display = 'none';
-
-            if (resp.status === 'review_needed') {
-                const d = resp.data;
-                document.getElementById('inpName').value = d.name || "";
-                document.getElementById('inpPlan').value = d.plan || ""; // ✅ แผนการเรียน
-                document.getElementById('inpGPAX').value = d.gpax || "";
-                document.getElementById('inpMathGPA').value = d.gpa_math || "";
-                document.getElementById('inpMathCredit').value = d.credit_math || "";
-                document.getElementById('inpSciGPA').value = d.gpa_sci || "";
-                document.getElementById('inpSciCredit').value = d.credit_sci || "";
-                document.getElementById('inpEngGPA').value = d.gpa_eng || "";
-                document.getElementById('inpEngCredit').value = d.credit_eng || "";
-                document.getElementById('rawText').value = d.raw_text || "";
-
-                document.getElementById('reviewModal').style.display = 'block';
-            } else {
-                alert(resp.message);
-                closePopup();
-            }
-        } catch (err) {
-            document.getElementById('loadingSpinner').style.display = 'none';
-            if (err.name === 'AbortError') {
-                alert("ใช้เวลานานเกินไป (Time out)");
-            } else {
-                alert("Connection Error: " + err.message);
-            }
-            closePopup();
-        }
-        fileInput.value = '';
-    }
-
-    async function confirmData() {
-        const btn = document.getElementById('btnConfirm');
-        btn.disabled = true; btn.innerText = "กำลังบันทึก...";
-
-        const finalData = `
-        ข้อมูลผู้สมัคร:
-        - ชื่อ: ${document.getElementById('inpName').value}
-        - แผนการเรียน: ${document.getElementById('inpPlan').value}
-        - GPAX: ${document.getElementById('inpGPAX').value}
-        - คณิตศาสตร์: เกรด ${document.getElementById('inpMathGPA').value} (${document.getElementById('inpMathCredit').value} หน่วยกิต)
-        - วิทยาศาสตร์: เกรด ${document.getElementById('inpSciGPA').value} (${document.getElementById('inpSciCredit').value} หน่วยกิต)
-        - อังกฤษ: เกรด ${document.getElementById('inpEngGPA').value} (${document.getElementById('inpEngCredit').value} หน่วยกิต)
-        Raw: ${document.getElementById('rawText').value}
-        `;
-
-        try {
-            const res = await fetch("/ocr/confirm/", {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({ 
-                    text: finalData, 
-                    user_name: document.getElementById('inpName').value 
-                })
-            });
-            const data = await res.json();
-
-            if (data.status === 'success') {
-                alert("บันทึกสำเร็จ!");
-                location.reload(); 
-            } else {
-                alert("Error: " + data.message);
-                btn.disabled = false;
-                btn.innerText = "ยืนยันข้อมูล";
-            }
-        } catch (err) {
-            alert("Error");
-            btn.disabled = false;
-        }
-    }
-
-    function closePopup() {
-        document.getElementById('overlay').style.display = 'none';
+        // ซ่อน; Loading
         document.getElementById('loadingSpinner').style.display = 'none';
-        document.getElementById('reviewModal').style.display = 'none';
+
+        if (data.success) {
+            openReviewModal(data.ocr_data);
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.error);
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('เชื่อมต่อเซิร์ฟเอวอร์ล้มเหลว');
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
     }
+}
+
+async function runFrontOCR() {
+    if (!fileFrontObj) {
+        alert("กรุณาเลือกไฟล์ด้านหน้าก่อน");
+        return;
+    }
+
+    // แสดง Loading (เหมือน back)
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+
+    try {
+        const formData = new FormData();
+        formData.append("front_file", fileFrontObj);
+
+        const res = await fetch("{% url 'run_front_ocr' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        });
+
+        const data = await res.json();
+
+        // ซ่อน Loading
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+
+        if (data.success) {
+            appendMessage("✅ อัปโหลดไฟล์ Front และทำ OCR เรียบร้อย", "bot");
+            appendMessage("ขอบคุณมากครับ! กรุณากดปุ่ม 'เริ่มประมวลผล AI' เพื่อวิเคราะห์ข้อมูลต่อไป", "bot");
+        } else {
+            alert("เกิดข้อผิดพลาด: " + data.error);
+        }
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+    }
+}
+
+
+async function runBackOCR() {
+    if (!fileBackObj) {
+        alert("กรุณาเลือกไฟล์ด้านหลังก่อน");
+        return;
+    }
+
+
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+
+    try {
+        const formData = new FormData();
+        formData.append("back_file", fileBackObj); // 🔥 หัวใจของแบบ B
+
+        const res = await fetch("{% url 'run_back_ocr' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        });
+
+        const data = await res.json();
+
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+
+        if (data.success) {
+            appendMessage("✅ อัปโหลดไฟล์ Back และทำ OCR เรียบร้อย", "bot");
+            appendMessage("ขอบคุณมากครับ! กรุณากดปุ่ม 'เริ่มประมวลผล AI' เพื่อวิเคราะห์ข้อมูลต่อไป", "bot");
+        } else {
+            alert("เกิดข้อผิดพลาด: " + data.error);
+        }
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+    }
+}
+
+/* ---------- REVIEW MODAL LOGIC ---------- */
+function openReviewModal(data) {
+    document.getElementById('reviewModal').style.display = 'block';
+    
+    document.getElementById('inpName').value = data.name || '';
+    document.getElementById('inpSchool').value = data.school || '';
+    document.getElementById('inpPlan').value = data.study_plan || '';
+    document.getElementById('inpGPAX').value = data.gpax || '';
+
+    document.getElementById('inpMathGPA').value = data.math_gpa || '';
+    document.getElementById('inpMathCredit').value = data.math_credit || '';
+    
+    document.getElementById('inpSciGPA').value = data.science_gpa || '';
+    document.getElementById('inpSciCredit').value = data.science_credit || '';
+    
+    document.getElementById('inpEngGPA').value = data.english_gpa || '';
+    document.getElementById('inpEngCredit').value = data.english_credit || '';
+    
+    const rawText = document.getElementById('rawText');
+    if(rawText) rawText.value = data.raw_text || '';
+}
+
+function closePopup() {
+    document.getElementById('reviewModal').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('loadingSpinner').style.display = 'none';
+}
+
+async function confirmData() {
+    const payload = {
+        name: document.getElementById('inpName').value,
+        school: document.getElementById('inpSchool').value,
+        study_plan: document.getElementById('inpPlan').value,
+        gpax: document.getElementById('inpGPAX').value,
+        math_gpa: document.getElementById('inpMathGPA').value,
+        math_credit: document.getElementById('inpMathCredit').value,
+        science_gpa: document.getElementById('inpSciGPA').value,
+        science_credit: document.getElementById('inpSciCredit').value,
+        english_gpa: document.getElementById('inpEngGPA').value,
+        english_credit: document.getElementById('inpEngCredit').value,
+    };
+
+    closePopup();
+    appendMessage("✅ ยืนยันข้อมูลเรียบร้อย กำลังวิเคราะห์คุณสมบัติ...", "user");
+    showTyping();
+
+    try {
+        const response = await fetch("{% url 'save_student_data' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        hideTyping();
+        
+        if (data.reply) {
+            appendMessage(data.reply, 'bot');
+        } else {
+            appendMessage("✅ บันทึกข้อมูลสำเร็จ", 'bot');
+        }
+
+    } catch (error) {
+        hideTyping();
+        console.error(error);
+        appendMessage("❌ บันทึกข้อมูลล้มเหลว", 'bot');
+    }
+}
+
+/* ---------- CHAT LOGIC ---------- */
+function showTyping() {
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.id = 'typingBubble';
+    div.innerHTML = `<div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="bubble text-muted" style="font-style:italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังพิมพ์...</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function hideTyping() {
+    const el = document.getElementById('typingBubble');
+    if (el) el.remove();
+}
+
+function handleEnter(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function appendMessage(text, sender) {
+    const box = document.getElementById('chatBox');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg ${sender}`;
+
+    let content = text;
+    if (sender === 'bot' && typeof marked !== 'undefined') {
+        content = marked.parse(text);
+    }
+
+    const avatar = sender === 'bot' ? '<div class="avatar"><i class="fa-solid fa-robot"></i></div>' : '';
+    msgDiv.innerHTML = `${avatar}<div class="bubble">${content}</div>`;
+    box.appendChild(msgDiv);
+    box.scrollTop = box.scrollHeight;
+}
+
+async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const btnSend = document.querySelector('.btn-send');
+    const msg = input.value.trim();
+
+    if (!msg) return;
+
+    btnSend.disabled = true;
+    input.disabled = true;
+
+    appendMessage(msg, 'user');
+    input.value = '';
+    showTyping();
+
+    try {
+        const res = await fetch("{% url 'chat_api' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ message: msg })
+        });
+
+        const data = await res.json();
+        hideTyping();
+
+        if (data.reply) {
+            appendMessage(data.reply, 'bot');
+        } else {
+            appendMessage("❌ ระบบไม่สามารถตอบได้ในขณะนี้", 'bot');
+        }
+
+    } catch (err) {
+        hideTyping();
+        appendMessage("⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ", 'bot');
+    } finally {
+        btnSend.disabled = false;
+        input.disabled = false;
+        input.focus();
+    }
+}
 </script>
+
 {% endblock %}

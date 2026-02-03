@@ -57,18 +57,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "admission_system.wsgi.application"
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'admission_system_db',
-        'USER': 'km',
-        'PASSWORD': 'password@km',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'admission_system_db',
+#         'USER': 'km',
+#         'PASSWORD': 'password@km',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'charset': 'utf8mb4',
+#         },
+#     }
+# }
 
 
 AUTH_PASSWORD_VALIDATORS = []
@@ -85,7 +92,12 @@ STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/criteria/manage/'  # 👈 ล็อกอินเสร็จ พุ่งไปหน้านี้เลย!
+LOGOUT_REDIRECT_URL = '/'                 # ล็อกเอาท์แล้วกลับหน้าแรก
