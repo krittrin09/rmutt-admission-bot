@@ -1,7 +1,5 @@
 # RMUTT CSI Admission Chatbot 🤖🎓
 
-ระบบ Chatbot อัจฉริยะสำหรับตอบคำถามและตรวจสอบคุณสมบัติการรับสมัครนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มทร.ธัญบุรี (RMUTT) โดยใช้เทคโนโลยี RAG (Retrieval-Augmented Generation) และ OCR
-
 ## ✨ ฟีเจอร์หลัก
 * **AI Chatbot:** ตอบคำถามเกณฑ์การรับสมัครได้อย่างแม่นยำโดยอ้างอิงจากระเบียบการล่าสุด
 * **Transcript OCR:** รองรับการอัปโหลดใบ ปพ.1 (รูปภาพ/PDF) เพื่อดึงเกรดและตรวจสอบคุณสมบัติอัตโนมัติ
@@ -10,7 +8,7 @@
 
 ## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 * **Backend:** Django (Python)
-* **AI Model:** Google Gemini (via LangChain)
+* **AI Model:** qwen2.5:1.5b (via LangChain)
 * **Vector DB:** FAISS (สำหรับระบบ RAG)
 * **OCR:** Tesseract OCR + Poppler (pdf2image)
 * **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (AJAX)
@@ -19,8 +17,8 @@
 
 1.  **Clone โปรเจกต์**
     ```bash
-    git clone [https://github.com/USERNAME/REPO_NAME.git](https://github.com/USERNAME/REPO_NAME.git)
-    cd REPO_NAME
+    git clone [https://github.com/krittrin09/rmutt-admission-bot.git](https://github.com/krittrin09/rmutt-admission-bot.git)
+    cd rmutt-admission-bot
     ```
 
 2.  **สร้าง Virtual Environment**
