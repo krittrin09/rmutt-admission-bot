@@ -21,3 +21,6 @@ db.sqlite3
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# OCR Engine Model Directory
+ocr_engine/model_typhoon/
