@@ -1,6 +1,7 @@
+# ocr_engine/service.py
 import os
 from ocr_engine.main_back_pipeline import run_back_pipeline
-from ocr_engine.main_front_pipline import run_front_pipeline  # ✅ เพิ่ม
+from ocr_engine.main_front_pipline import run_front_pipeline  
 from ocr_engine.model_loader import load_model
 
 # Lazy-loaded singletons
@@ -32,10 +33,6 @@ def run_back_ocr_from_image(image_path: str, **kwargs):
 
 
 def run_back_ocr_from_temp_filename(temp_image_path: str, **kwargs):
-    """
-    Wrapper สำหรับกรณี view ส่ง path ของไฟล์ชั่วคราวเข้ามา
-    (ชื่อฟังก์ชันนี้จำเป็น เพราะ ocr_app/views.py import ชื่อนี้)
-    """
     return run_back_ocr_from_image(temp_image_path, **kwargs)
 
 

@@ -90,7 +90,7 @@ def run_front_ocr(image, model, processor, device: str = "cpu") -> str:
     with torch.no_grad():
         output = model.generate(
             **inputs,
-            max_new_tokens=2048,
+            max_new_tokens=1000,
             do_sample=False,
             temperature=0.0,
             eos_token_id=processor.tokenizer.eos_token_id,
