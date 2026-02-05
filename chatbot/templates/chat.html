@@ -190,7 +190,28 @@
     .form-control { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 10px; width: 100%; box-sizing: border-box; }
     .section-title { grid-column: span 2; font-size: 0.95rem; color: var(--primary); font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 15px; margin-bottom: 5px; }
     
-    #loadingSpinner { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 15px; z-index: 2001; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+    /* FULLSCREEN LOADING */
+#loadingSpinner {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99999;
+
+    display: none;              /* ค่าเริ่มต้น */
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+#loadingSpinner .loading-box {
+    background: white;
+    padding: 25px 30px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}
+
 </style>
 
 <div class="top-navbar">
@@ -222,21 +243,21 @@
         <div class="upload-group">
             <div class="upload-btn-wrapper" style="width:100%">
                 <div class="btn-file" id="btnFront" onclick="document.getElementById('fileFront').click()">
-                    <i class="fa-solid fa-file-image fa-lg"></i> เลือกด้านหน้า (Front)
+                    <i class="fa-solid fa-file-image fa-lg"></i> อัพโหลดใบปพ.1 ด้านหน้า 
                 </div>
                 <input type="file" id="fileFront" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" onchange="updateFileStatus('Front')">
             </div>
-            <button id="btnRunFront" disabled onclick="runFrontOCR()">Run Front</button>
+            <button id="btnRunFront" disabled onclick="runFrontOCR()">กดเพื่ออ่านข้อมูลด้านหน้า</button>
             <div class="upload-btn-wrapper" style="width:100%">
                 <div class="btn-file" id="btnBack" onclick="document.getElementById('fileBack').click()">
-                    <i class="fa-solid fa-file-lines fa-lg"></i> เลือกด้านหลัง (Back)
+                    <i class="fa-solid fa-file-lines fa-lg"></i> อัพโหลดใบปพ.1 ด้านหลัง
                 </div>
                 <input type="file" id="fileBack" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" onchange="updateFileStatus('Back')">
             </div>
-            <button id="btnRunBack"  disabled onclick="runBackOCR()">Run Back</button>
+            <button id="btnRunBack"  disabled onclick="runBackOCR()">กดเพื่ออ่านข้อมูลด้านหลัง</button>
 
             <button class="btn-process" id="btnProcess" onclick="uploadBothFiles()">
-                <i class="fa-solid fa-microchip"></i> เริ่มประมวลผล AI
+                <i class="fa-solid fa-microchip"></i> เริ่มต้นประมวลผลข้อมูล ปพ.1
             </button>
         </div>
 
@@ -298,8 +319,10 @@
 
 <div id="overlay"></div>
 <div id="loadingSpinner">
-    <div class="spinner-border text-warning mb-2" role="status"></div>
-    <h6 class="m-0 text-muted">กำลังประมวลผล...</h6>
+    <div class="loading-box">
+        <div class="spinner-border text-warning mb-2" role="status"></div>
+        <h6 class="m-0 text-muted">กำลังประมวลผล...</h6>
+    </div>
 </div>
 
 <div id="reviewModal" class="custom-modal">
@@ -391,12 +414,16 @@
     <!-- เหมือน PC -->
     <div class="upload-group" style="margin:0; gap:12px;">
       
-      <div class="btn-file" onclick="document.getElementById('fileFront').click()">
+      <div class="btn-file" id="popupBtnFront"
+     onclick="document.getElementById('fileFront').click()">
+
         <i class="fa-solid fa-file-image fa-lg"></i> เลือกด้านหน้า (Front)
       </div>
       <button id="popupRunFront" disabled onclick="runFrontOCR()" style="width:100%;">Run Front</button>
 
-      <div class="btn-file" onclick="document.getElementById('fileBack').click()">
+      <div class="btn-file" id="popupBtnBack"
+     onclick="document.getElementById('fileBack').click()">
+
         <i class="fa-solid fa-file-lines fa-lg"></i> เลือกด้านหลัง (Back)
       </div>
       <button id="popupRunBack" disabled onclick="runBackOCR()" style="width:100%;">Run Back</button>
@@ -446,7 +473,6 @@ function syncPopupButtons() {
 function updateFileStatus(side) {
     const input = document.getElementById(`file${side}`);
     const file = input.files[0];
-
     if (!file) return;
 
     if (side === 'Front') {
@@ -459,11 +485,23 @@ function updateFileStatus(side) {
         document.getElementById('btnRunBack').disabled = false;
     }
 
+    // ===== ปุ่มฝั่ง Sidebar (PC) =====
     const targetBtn = document.getElementById(`btn${side}`);
-    targetBtn.classList.add('has-file');
-    targetBtn.innerHTML =
-        `<i class="fa-solid fa-check-circle"></i> ${side}: ${file.name.substring(0, 12)}...`;
+    if (targetBtn) {
+        targetBtn.classList.add('has-file');
+        targetBtn.innerHTML =
+            `<i class="fa-solid fa-check-circle"></i> ${side}: ${file.name.substring(0, 12)}...`;
+    }
 
+    // ===== ปุ่มฝั่ง Popup (Mobile) =====
+    const popupBtn = document.getElementById(`popupBtn${side}`);
+    if (popupBtn) {
+        popupBtn.classList.add('has-file');
+        popupBtn.innerHTML =
+            `<i class="fa-solid fa-check-circle"></i> ${side}: ${file.name.substring(0, 12)}...`;
+    }
+
+    // ===== ปุ่มเริ่มประมวลผล =====
     const btnProcess = document.getElementById('btnProcess');
     if (fileFrontObj || fileBackObj) {
         btnProcess.classList.add('ready');
@@ -475,8 +513,15 @@ function updateFileStatus(side) {
 
 
 
+
 async function uploadBothFiles() {
     
+        // ✅ ปิด popup upload ก่อน
+    closeUploadPopup();
+
+    // ✅ แสดงตัวประมวลผล
+    document.getElementById('loadingSpinner').style.display = 'flex';
+
     if (!fileFrontObj && !fileBackObj) {
     alert("กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์");
     return;
@@ -521,7 +566,7 @@ async function runFrontOCR() {
     }
 
     // แสดง Loading (เหมือน back)
-    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'flex';
     document.getElementById('overlay').style.display = 'block';
 
     try {
@@ -565,7 +610,7 @@ async function runBackOCR() {
     }
 
 
-    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'flex';
     document.getElementById('overlay').style.display = 'block';
 
     try {
