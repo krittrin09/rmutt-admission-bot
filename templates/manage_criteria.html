@@ -110,27 +110,36 @@
                                                 <label class="small fw-bold text-success mb-1 d-block text-center">วันเริ่มรับสมัคร</label>
                                                 <div class="input-group shadow-sm rounded-3 overflow-hidden">
                                                     <span class="input-group-text bg-white border-0 text-success ps-3"><i class="fas fa-play"></i></span>
-                                                    <input type="date" class="form-control border-0 py-2 global-start-date date-input-be" 
-                                                           value="{{ first_item.iso_start|default:'' }}"
-                                                           onchange="applyDateToAll(this, 'start')">
+                                                    <input type="text"
+                                                        placeholder="วัน/เดือน/ปี(พ.ศ.)"
+                                                        class="form-control border-0 py-2 global-start-date date-input-be"
+                                                        value="{{ first_item.iso_start|default:'' }}"
+                                                        onchange="applyDateToAll(this, 'start')">
+
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="small fw-bold text-danger mb-1 d-block text-center">วันสิ้นสุดรับสมัคร</label>
                                                 <div class="input-group shadow-sm rounded-3 overflow-hidden">
                                                     <span class="input-group-text bg-white border-0 text-danger ps-3"><i class="fas fa-stop"></i></span>
-                                                    <input type="date" class="form-control border-0 py-2 global-end-date date-input-be" 
-                                                           value="{{ first_item.iso_end|default:'' }}"
-                                                           onchange="applyDateToAll(this, 'end')">
+                                                    <input type="text"
+                                                        placeholder="วัน/เดือน/ปี(พ.ศ.)"
+                                                        class="form-control border-0 py-2 global-end-date date-input-be"
+                                                        value="{{ first_item.iso_end|default:'' }}"
+                                                        onchange="applyDateToAll(this, 'end')">
+
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="small fw-bold text-primary mb-1 d-block text-center">วันสอบสัมภาษณ์</label>
                                                 <div class="input-group shadow-sm rounded-3 overflow-hidden">
                                                     <span class="input-group-text bg-white border-0 text-primary ps-3"><i class="fas fa-comments"></i></span>
-                                                    <input type="date" class="form-control border-0 py-2 global-interview-date date-input-be" 
-                                                           value="{{ first_item.iso_interview|default:'' }}"
-                                                           onchange="applyDateToAll(this, 'interview')">
+                                                    <input type="text"
+                                                        placeholder="วัน/เดือน/ปี(พ.ศ.)"
+                                                        class="form-control border-0 py-2 global-interview-date date-input-be"
+                                                        value="{{ first_item.iso_interview|default:'' }}"
+                                                        onchange="applyDateToAll(this, 'interview')">
+
                                                 </div>
                                             </div>
                                         </div>
@@ -212,139 +221,142 @@
 const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 const monthsFull = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-// แปลง ISO (YYYY-MM-DD) -> วันที่ไทย
+/* ===== FIX TIMEZONE BUG ===== */
+function parseISO(dateStr){
+    if(!dateStr) return null;
+    const parts = dateStr.split('-');
+    if(parts.length !== 3) return null;
+    return {
+        y: parseInt(parts[0]),
+        m: parseInt(parts[1]),
+        d: parseInt(parts[2])
+    };
+}
+
+/* ISO -> วันที่ไทย */
 function formatDateThai(dateStr) {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    
-    let year = d.getFullYear();
-    if (year < 2400) year += 543;
-    return `${d.getDate()} ${months[d.getMonth()]} ${year}`;
+    if(!dateStr) return "";
+
+    // รับ ISO เท่านั้น YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if(parts.length !== 3) return dateStr;
+
+    const y = parseInt(parts[0],10);
+    const m = parseInt(parts[1],10);
+    const d = parseInt(parts[2],10);
+
+    if(!y || !m || !d) return dateStr;
+
+    return `${d} ${months[m-1]} ${y+543}`;
 }
 
-// แปลง ISO -> DD/MM/YYYY (พ.ศ.)
-function formatDateThaiInput(dateStr) {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "";
-    
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear() + 543;
-    return `${day}/${month}/${year}`;
+
+/* ===== แปลง input BE ===== */
+
+function toBEInputFormat(iso){
+    if(!iso) return "";
+    const p = parseISO(iso);
+    if(!p) return "";
+    return `${String(p.d).padStart(2,'0')}/${String(p.m).padStart(2,'0')}/${p.y+543}`;
 }
 
-// แปลง timestamp -> วันที่เวลาไทยแบบเต็ม
+function fromBEtoISO(be){
+    if(!be) return "";
+
+    // รับเฉพาะรูปแบบ dd/mm/yyyy
+    const parts = be.trim().split('/');
+    if(parts.length !== 3) return "";
+
+    let d = parseInt(parts[0],10);
+    let m = parseInt(parts[1],10);
+    let y = parseInt(parts[2],10);
+
+    // แปลง พ.ศ. -> ค.ศ.
+    if(y > 2400) y -= 543;
+
+    // กัน user ใส่กลับด้าน
+    if(m > 12 && d <= 12){
+        const tmp = d;
+        d = m;
+        m = tmp;
+    }
+
+    // เติม 0 หน้า
+    const dd = String(d).padStart(2,'0');
+    const mm = String(m).padStart(2,'0');
+
+    return `${y}-${mm}-${dd}`; // ISO จริง
+}
+
+
+/* timestamp -> datetime ไทย */
 function convertToThaiDateTime(dateTimeStr) {
     if (!dateTimeStr) return "";
-    
+
     let d;
-    
+
     if (dateTimeStr.includes('/')) {
         const parts = dateTimeStr.split(' ');
         const dateParts = parts[0].split('/');
-        const timeParts = parts[1] ? parts[1].split(':') : ['00', '00', '00'];
-        
+        const timeParts = parts[1] ? parts[1].split(':') : ['00','00','00'];
+
         let year = parseInt(dateParts[2]);
-        if (year > 2400) year -= 543;
-        
-        d = new Date(year, parseInt(dateParts[1]) - 1, parseInt(dateParts[0]), 
-                     parseInt(timeParts[0]), parseInt(timeParts[1]), parseInt(timeParts[2] || 0));
+        if(year > 2400) year -= 543;
+
+        d = new Date(year, parseInt(dateParts[1])-1, parseInt(dateParts[0]),
+                     parseInt(timeParts[0]), parseInt(timeParts[1]), parseInt(timeParts[2]||0));
     } else {
         d = new Date(dateTimeStr);
     }
-    
-    if (isNaN(d.getTime())) return dateTimeStr;
-    
-    const day = d.getDate();
-    const month = monthsFull[d.getMonth()];
-    const year = d.getFullYear() + 543;
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    
-    return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
+
+    if(isNaN(d)) return dateTimeStr;
+
+    return `${d.getDate()} ${monthsFull[d.getMonth()]} ${d.getFullYear()+543} 
+            ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// แปลง input date ให้แสดง พ.ศ. โดยแทนที่ปีใน input โดยตรง
-function initDateInputs() {
-    document.querySelectorAll('.date-input-be').forEach(input => {
-        // เก็บค่า ISO เดิมไว้
-        const originalValue = input.value;
-        
-        function updateDisplay() {
-            if (input.value) {
-                const isoValue = input.value; // เก็บค่า ISO
-                input.dataset.isoValue = isoValue; // เก็บไว้ใน data attribute
-                
-                // แสดงวันที่แบบ พ.ศ. ใน input
-                const thaiDate = formatDateThaiInput(isoValue);
-                if (thaiDate && !input.matches(':focus')) {
-                    input.type = 'text';
-                    input.value = thaiDate;
-                    input.dataset.showingThai = 'true';
-                }
-            }
-        }
-        
-        input.addEventListener('focus', function() {
-            // เปลี่ยนกลับเป็น type date และแสดงค่า ISO เมื่อ focus
-            if (this.dataset.showingThai === 'true') {
-                this.type = 'date';
-                this.value = this.dataset.isoValue || '';
-                this.dataset.showingThai = 'false';
-            }
-        });
-        
-        input.addEventListener('blur', function() {
-            updateDisplay();
-        });
-        
-        input.addEventListener('change', function() {
-            updateDisplay();
-        });
-        
-        // แสดงครั้งแรก
-        if (originalValue) {
-            input.dataset.isoValue = originalValue;
-            updateDisplay();
-        }
-    });
-}
 
+/* ===== GLOBAL APPLY DATE ===== */
 function applyDateToAll(input, type) {
-    const pane = input.closest('.round-pane');
-    // ใช้ค่า ISO ที่เก็บไว้
-    const rawValue = input.dataset.isoValue || input.value;
-    const formattedDate = rawValue ? formatDateThai(rawValue) : "";
-    
-    let hiddenSelector = '';
-    let displaySelector = '';
 
-    if (type === 'start') {
-        hiddenSelector = '.date-start-input';
-        displaySelector = '.show-start';
-    } else if (type === 'end') {
-        hiddenSelector = '.date-end-input';
-        displaySelector = '.show-end';
-    } else if (type === 'interview') {
-        hiddenSelector = '.date-interview-input';
-        displaySelector = '.show-interview';
+    const pane = input.closest('.round-pane');
+    const isoValue = fromBEtoISO(input.value);
+    const thaiText = isoValue ? formatDateThai(isoValue) : "";
+
+    let hiddenSelector='';
+    let displaySelector='';
+
+    if(type==='start'){
+        hiddenSelector='.date-start-input';
+        displaySelector='.show-start';
     }
-    
-    pane.querySelectorAll(hiddenSelector).forEach(el => el.value = rawValue);
-    pane.querySelectorAll(displaySelector).forEach(el => {
-        el.textContent = formattedDate || "ยังไม่ระบุ";
+    if(type==='end'){
+        hiddenSelector='.date-end-input';
+        displaySelector='.show-end';
+    }
+    if(type==='interview'){
+        hiddenSelector='.date-interview-input';
+        displaySelector='.show-interview';
+    }
+
+    pane.querySelectorAll(hiddenSelector).forEach(el=>el.value=isoValue);
+    pane.querySelectorAll(displaySelector).forEach(el=>{
+        el.textContent = thaiText || "ยังไม่ระบุ";
     });
 }
 
+
+/* ===== COMBINE DATA SAVE ===== */
 function combineData(event) {
-    const roundPanes = document.querySelectorAll('.round-pane');
-    let combined = [];
-    roundPanes.forEach(pane => {
-        pane.querySelectorAll('.course-card').forEach(card => {
+
+    const panes = document.querySelectorAll('.round-pane');
+    let combined=[];
+
+    panes.forEach(pane=>{
+        pane.querySelectorAll('.course-card').forEach(card=>{
+
             const textarea = card.querySelector('.data-content');
+
             const dStartISO = card.querySelector('.date-start-input').value.trim();
             const dEndISO = card.querySelector('.date-end-input').value.trim();
             const dInterviewISO = card.querySelector('.date-interview-input').value.trim();
@@ -352,58 +364,85 @@ function combineData(event) {
             const dStart = dStartISO ? formatDateThai(dStartISO) : "";
             const dEnd = dEndISO ? formatDateThai(dEndISO) : "";
             const dInterview = dInterviewISO ? formatDateThai(dInterviewISO) : "";
+
             let content = textarea.value.trim();
-            
-            if (content) {
-                if (dStart && dEnd) {
-                    content = content.replace(/^[\s\-\*•]*ช่วงเวลาการรับสมัคร:.*$/gm, "").trim();
-                    const newDateLine = `- ช่วงเวลาการรับสมัคร: ${dStart} ถึง ${dEnd}`;
-                    content += "\n" + newDateLine;
+
+            if(content){
+
+                if(dStart && dEnd){
+                    content = content.replace(/^[\s\-\*•]*ช่วงเวลาการรับสมัคร:.*$/gm,"").trim();
+                    content += `\n- ช่วงเวลาการรับสมัคร: ${dStart} ถึง ${dEnd}`;
                 }
 
-                if (dInterview) {
-                    content = content.replace(/^[\s\-]*วันที่:.*$/gm, "").trim();
-                    if (content.includes("กำหนดการสัมภาษณ์:")) {
-                        content = content.replace("กำหนดการสัมภาษณ์:", `กำหนดการสัมภาษณ์:\n- วันที่: ${dInterview}`);
-                    } else {
+                if(dInterview){
+                    content = content.replace(/^[\s\-]*วันที่:.*$/gm,"").trim();
+                    if(content.includes("กำหนดการสัมภาษณ์:")){
+                        content = content.replace("กำหนดการสัมภาษณ์:",`กำหนดการสัมภาษณ์:\n- วันที่: ${dInterview}`);
+                    }else{
                         content += `\nกำหนดการสัมภาษณ์:\n- วันที่: ${dInterview}`;
                     }
                 }
+
                 combined.push(content);
             }
+
         });
     });
+
     document.getElementById('finalRagText').value = combined.join('\n\n---\n\n');
+
     const btn = document.getElementById('btnSubmitAI');
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> กำลังบันทึก...';
+    btn.innerHTML='<i class="fas fa-circle-notch fa-spin me-2"></i> กำลังบันทึก...';
     btn.classList.add('disabled');
-    return true; 
+
+    return true;
 }
 
-// แสดงชื่อไฟล์เมื่อเลือก
-document.addEventListener('DOMContentLoaded', function() {
-    // แปลงเวลาด้านบนเป็น พ.ศ.
-    const thaiDateTimeEl = document.getElementById('thaiDateTime');
-    if (thaiDateTimeEl && thaiDateTimeEl.textContent.trim()) {
-        const originalDateTime = thaiDateTimeEl.textContent.trim();
-        thaiDateTimeEl.textContent = convertToThaiDateTime(originalDateTime);
+
+/* ===== ON LOAD ===== */
+document.addEventListener('DOMContentLoaded', function(){
+
+    const thaiDateTimeEl=document.getElementById('thaiDateTime');
+    if(thaiDateTimeEl && thaiDateTimeEl.textContent.trim()){
+        thaiDateTimeEl.textContent = convertToThaiDateTime(thaiDateTimeEl.textContent.trim());
     }
-    
-    // แปลง input date ให้แสดง พ.ศ.
-    initDateInputs();
-    
-    // จัดการ file input
-    const fileInput = document.getElementById('excelFile');
-    if (fileInput) {
-        fileInput.addEventListener('change', function() {
-            const fileName = this.files[0] ? this.files[0].name : 'เลือกไฟล์ Excel (.xlsx)';
-            document.getElementById('fileName').textContent = fileName;
-            document.getElementById('fileName').classList.toggle('text-muted', !this.files[0]);
-            document.getElementById('fileName').classList.toggle('text-success', !!this.files[0]);
-            document.getElementById('fileName').classList.toggle('fw-bold', !!this.files[0]);
-        });
-    }
+
+    /* แปลง input date เป็น พ.ศ. */
+    document.querySelectorAll('.date-input-be').forEach(el=>{
+        if(el.value){
+            el.value = toBEInputFormat(el.value);
+        }
+    });
+
 });
+function toBEInputFormat(iso){
+    if(!iso) return "";
+    const p = parseISO(iso);
+    if(!p) return "";
+    return `${String(p.d).padStart(2,'0')}/${String(p.m).padStart(2,'0')}/${p.y+543}`;
+}
+
+function fromBEtoISO(be){
+    if(!be) return "";
+    const parts = be.split('/');
+    if(parts.length !== 3) return "";
+    const d = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
+    let y = parseInt(parts[2]);
+
+    if(y > 2400) y -= 543;
+
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.date-input-be').forEach(el=>{
+        if(el.value){
+            el.value = toBEInputFormat(el.value);
+        }
+    });
+});
+
 </script>
 
 <style>
