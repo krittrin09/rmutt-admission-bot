@@ -35,6 +35,7 @@
             {% endfor %}
         {% endif %}
 
+        {% if user.is_superuser %}
         <div class="upload-section mb-4 p-4 rounded-3 shadow-sm bg-gradient-light">
             <div class="d-flex align-items-center mb-3">
                 <div class="upload-icon bg-brown text-white rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
@@ -62,6 +63,7 @@
                 </div>
             </form>
         </div>
+        {% endif %}
 
         {% if preview_data %}
         <div class="card border-0 shadow-lg rounded-3 overflow-hidden mb-5">
@@ -185,9 +187,19 @@
                                             </div>
 
                                             <div class="col-md-8 p-4">
-                                                <label class="text-muted small fw-bold mb-2">รายละเอียดและเกณฑ์การรับ:</label>
-                                                <textarea class="form-control data-content font-monospace bg-white border rounded-3 text-secondary p-3 shadow-sm h-100" 
-                                                          style="font-size: 0.9rem; min-height: 250px; resize: vertical;">{{ item.content }}</textarea>
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <label class="text-muted small fw-bold mb-0">รายละเอียดและเกณฑ์การรับ:</label>
+                                                    <div>
+                                                        {% if not item.can_edit %}
+                                                            <span class="badge bg-secondary"><i class="fas fa-lock"></i> ดูได้อย่างเดียว</span>
+                                                        {% else %}
+                                                            <span class="badge bg-success"><i class="fas fa-edit"></i> แก้ไขได้</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <textarea class="form-control data-content font-monospace border rounded-3 p-3 shadow-sm h-100 {% if not item.can_edit %}bg-light text-muted{% else %}bg-white text-secondary{% endif %}" 
+                                                          style="font-size: 0.9rem; min-height: 250px; resize: vertical;"
+                                                          {% if not item.can_edit %}readonly style="background-color: #e9ecef !important;" title="คุณไม่มีสิทธิ์แก้ไขสาขานี้"{% endif %}>{{ item.content }}</textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -402,17 +414,23 @@ function combineData(event) {
 /* ===== ON LOAD ===== */
 document.addEventListener('DOMContentLoaded', function(){
 
-    const thaiDateTimeEl=document.getElementById('thaiDateTime');
-    if(thaiDateTimeEl && thaiDateTimeEl.textContent.trim()){
-        thaiDateTimeEl.textContent = convertToThaiDateTime(thaiDateTimeEl.textContent.trim());
-    }
+    const fileInput = document.getElementById('excelFile');
+    const fileNameLabel = document.getElementById('fileName');
 
-    /* แปลง input date เป็น พ.ศ. */
-    document.querySelectorAll('.date-input-be').forEach(el=>{
-        if(el.value){
-            el.value = toBEInputFormat(el.value);
-        }
-    });
+    if(fileInput){
+        fileInput.addEventListener('change', function(){
+
+            if(this.files && this.files.length > 0){
+                fileNameLabel.textContent = this.files[0].name;
+                fileNameLabel.classList.remove("text-muted");
+                fileNameLabel.classList.add("text-success","fw-bold");
+            }else{
+                fileNameLabel.textContent = "เลือกไฟล์ Excel (.xlsx)";
+                fileNameLabel.classList.add("text-muted");
+            }
+
+        });
+    }
 
 });
 function toBEInputFormat(iso){
@@ -442,7 +460,15 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
 });
+document.getElementById('excelFile')?.addEventListener('change', function(e){
 
+    const fileName = e.target.files.length 
+        ? e.target.files[0].name 
+        : "เลือกไฟล์ Excel (.xlsx)";
+
+    document.getElementById('fileName').textContent = fileName;
+
+});
 </script>
 
 <style>

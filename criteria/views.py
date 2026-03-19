@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
@@ -7,6 +7,9 @@ import os
 import logging
 from datetime import datetime
 import re
+
+# ★ 1. นำเข้า Model สิทธิ์ที่สร้างไว้
+from .models import MajorPermission
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +60,8 @@ def to_buddhist_year(date_str):
 # ==============================
 # MAIN VIEW
 # ==============================
+# ★ 2. ถอด @user_passes_test ออก เพื่อให้ User ทั่วไปเข้าหน้านี้ได้
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
 def manage_criteria(request):
 
     overview_path = os.path.join(
@@ -75,6 +78,11 @@ def manage_criteria(request):
 
     preview_data = {r: [] for r in ALL_ROUNDS}
 
+    # ★ 3. ดึงรายการสาขาที่ User ปัจจุบันมีสิทธิ์แก้ไข
+    allowed_majors = []
+    if not request.user.is_superuser:
+        allowed_majors = list(MajorPermission.objects.filter(user=request.user).values_list('major_name', flat=True))
+
     # ------------------------------------------------------------------
     # LOAD DATA
     # ------------------------------------------------------------------
@@ -87,6 +95,10 @@ def manage_criteria(request):
                 standard_name = "รอบที่ 1.2 Portfolio (MOU)"
             elif "4" in r_name:
                 standard_name = "รอบที่ 4 Direct Admission"
+
+            # ★ 4. เช็คสิทธิ์ก่อนส่งข้อมูลขึ้นหน้าเว็บ (กรณีมีไฟล์ใน Session)
+            for itm in items:
+                itm['can_edit'] = request.user.is_superuser or (itm.get('major_name') in allowed_majors)
 
             if standard_name in preview_data:
                 preview_data[standard_name] = items
@@ -113,26 +125,33 @@ def manage_criteria(request):
                         if r in item:
                             round_name = r
                             break
-                # ===== ดึงชื่อสาขาแทนชื่อมหาลัย =====
+                            
+                # ==========================================================
+                # ★ แก้ไข: ลำดับการดึงชื่อสาขา ให้ยึด "สาขาวิชา:" เป็นหลักเสมอ
+                # ==========================================================
                 topic = ""
                 lines = item.split("\n")
 
+                # วนหาคำว่า "สาขาวิชา:" ก่อน
                 for line in lines:
                     clean = line.strip()
-
                     if "สาขาวิชา:" in clean:
                         topic = clean.replace("สาขาวิชา:", "").strip()
                         break
-
-                    if "หลักสูตร:" in clean:
-                        topic = clean.replace("หลักสูตร:", "").strip()
-                        break
+                
+                # ถ้าไม่เจอ "สาขาวิชา:" ค่อยไปหา "หลักสูตร:"
+                if not topic:
+                    for line in lines:
+                        clean = line.strip()
+                        if "หลักสูตร:" in clean:
+                            topic = clean.replace("หลักสูตร:", "").strip()
+                            break
 
                 # fallback ถ้าไม่มีจริง ๆ
                 if not topic:
                     topic_line = item.strip().split("\n")[0].replace("#", "").strip()
                     topic = topic_line.replace("มหาวิทยาลัย:", "").strip()
-
+                # ==========================================================
 
                 start_date, end_date, interview_date = "", "", ""
                 lines = item.split('\n')
@@ -153,13 +172,17 @@ def manage_criteria(request):
 
                 item_id = str(hash(topic))[-6:]
 
+                # ★ 5. ส่งตัวแปร can_edit ไปให้ HTML
+                can_edit = request.user.is_superuser or (topic in allowed_majors)
+
                 data_obj = {
                     "id": item_id,
                     "major_name": topic,
                     "content": item.strip(),
                     "start_date": start_date,
                     "end_date": end_date,
-                    "interview_date": interview_date
+                    "interview_date": interview_date,
+                    "can_edit": can_edit
                 }
 
                 if round_name in preview_data:
@@ -189,6 +212,11 @@ def manage_criteria(request):
 
         # A) UPLOAD EXCEL
         if "action_upload_excel" in request.POST:
+            # ★ 6. ป้องกัน: ให้เฉพาะ Superuser อัปโหลดไฟล์ได้
+            if not request.user.is_superuser:
+                messages.error(request, "⚠️ เฉพาะผู้ดูแลระบบ (Superuser) เท่านั้นที่สามารถอัปโหลดไฟล์ Excel ได้")
+                return redirect("manage_criteria")
+
             excel_file = request.FILES.get("excel_file")
 
             if not excel_file:
@@ -248,17 +276,78 @@ def manage_criteria(request):
                 return redirect("manage_criteria")
 
             try:
-                # แปลงปีทั้งหมดเป็น พ.ศ. ก่อนบันทึก
-                final_content = to_buddhist_year(final_content)
+                # ★ 7. ระบบป้องกันหลังบ้าน: ใครไม่มีสิทธิ์ ห้ามเซฟทับ ให้ดึงข้อมูลเดิมจากไฟล์มาใส่แทน
+                original_dict = {}
+                if os.path.exists(overview_path):
+                    with open(overview_path, "r", encoding="utf-8") as f:
+                        orig_raw = f.read().split("\n\n---\n\n")
+                        for block in orig_raw:
+                            if not block.strip(): continue
+                            
+                            # ดึงชื่อสาขาด้วย Logic เดียวกับตอน Load
+                            orig_topic = ""
+                            for line in block.split("\n"):
+                                clean = line.strip()
+                                if "สาขาวิชา:" in clean:
+                                    orig_topic = clean.replace("สาขาวิชา:", "").strip()
+                                    break
+                            
+                            if not orig_topic:
+                                for line in block.split("\n"):
+                                    clean = line.strip()
+                                    if "หลักสูตร:" in clean:
+                                        orig_topic = clean.replace("หลักสูตร:", "").strip()
+                                        break
+                                        
+                            if not orig_topic:
+                                orig_topic = block.strip().split("\n")[0].replace("#", "").replace("มหาวิทยาลัย:", "").strip()
+                                
+                            original_dict[orig_topic] = block.strip()
+
+                new_blocks = final_content.split("\n\n---\n\n")
+                safe_blocks = []
+
+                for block in new_blocks:
+                    if not block.strip(): continue
+                    
+                    # ดึงชื่อสาขาจากข้อมูลที่เพิ่งส่งมา
+                    new_topic = ""
+                    for line in block.split("\n"):
+                        clean = line.strip()
+                        if "สาขาวิชา:" in clean:
+                            new_topic = clean.replace("สาขาวิชา:", "").strip()
+                            break
+                    
+                    if not new_topic:
+                        for line in block.split("\n"):
+                            clean = line.strip()
+                            if "หลักสูตร:" in clean:
+                                new_topic = clean.replace("หลักสูตร:", "").strip()
+                                break
+                                
+                    if not new_topic:
+                        new_topic = block.strip().split("\n")[0].replace("#", "").replace("มหาวิทยาลัย:", "").strip()
+
+                    # ตรวจสอบสิทธิ์
+                    if request.user.is_superuser or (new_topic in allowed_majors):
+                        # มีสิทธิ์แก้ -> ใช้ข้อมูลใหม่ และแปลงปี พ.ศ. ให้ตามเดิมของคุณ
+                        safe_blocks.append(to_buddhist_year(block.strip()))
+                    else:
+                        # ไม่มีสิทธิ์แก้ -> ดึงของเก่ากลับมาทับ!
+                        if new_topic in original_dict:
+                            safe_blocks.append(original_dict[new_topic])
+
+                # ประกอบร่างกลับเป็น Text เหมือนเดิม
+                safe_final_content = "\n\n---\n\n".join(safe_blocks)
 
                 os.makedirs(os.path.dirname(overview_path), exist_ok=True)
 
                 with open(overview_path, "w", encoding="utf-8") as f:
-                    f.write(final_content)
+                    f.write(safe_final_content)
 
                 ok = create_vector_db()
                 if ok:
-                    messages.success(request, "✅ บันทึกข้อมูลและอัปเดต RAG สำเร็จ")
+                    messages.success(request, "✅ บันทึกข้อมูลและอัปเดต RAG สำเร็จ (ระบบป้องกันการแก้ไขทำงานปกติ)")
                     request.session.pop("preview_list_cache", None)
                 else:
                     messages.warning(request, "⚠️ บันทึกไฟล์สำเร็จ แต่สร้าง Vector DB ไม่สำเร็จ")
