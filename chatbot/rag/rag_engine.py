@@ -148,7 +148,6 @@ def extract_course_details(text):
         elif "รอบที่ 4" in text or "ไดเรกแอดมิชชั่น" in text: details["round"] = "Direct Admission"
         else: details["round"] = "General"
 
-    # ★ แก้ไข: ดึงจาก "สาขาวิชา" ก่อน เพื่อเอาชื่อเต็มที่มีขีดต่อท้าย หากไม่มีค่อยหาคำว่า "หลักสูตร" ★
     major_match = re.search(r"สาขาวิชา:\s*(.+)", text)
     if not major_match:
         major_match = re.search(r"หลักสูตร:\s*(.+)", text)
@@ -303,12 +302,10 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
     elif any(x in q_lower for x in ["direct admission", "ไดเรกแอดมิชชั่น", "ไดเรกแอดมิชชัน", "รอบ 4", "รอบ4", "รอบที่ 4"]): 
         target_round = "Direct Admission"
 
-    # ★ ปรับปรุงการค้นหาสาขาให้รองรับชื่อที่มีขีด (-) หรือวงเล็บ ★
     target_majors = []
     q_norm = q_lower.replace("สาขาวิชา", "").replace("วิทยาศาสตรบัณฑิต", "").replace("การ", "").replace("ความ", "").replace("และ", "").replace(" ", "")
     
     for c in courses:
-        # ตัดส่วนขยายหลังเครื่องหมาย - หรือ ( ออก เพื่อใช้เทียบคำศัพท์หลักกับที่ผู้ใช้พิมพ์
         base_major = re.split(r'[-–(]', c['major'])[0]
         major_norm = base_major.lower().replace("สาขาวิชา", "").replace("วิทยาศาสตรบัณฑิต", "").replace("การ", "").replace("ความ", "").replace("และ", "").replace(" ", "")
         
@@ -321,6 +318,13 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
         
         if not is_general_question:
             return "❌ **ขออภัยครับ ระบบไม่มีข้อมูลของคณะหรือสาขาวิชาที่คุณสอบถามครับ**\n<br><br>*(หมายเหตุ: บอทสามารถให้ข้อมูลได้เฉพาะสาขาวิชาที่มีอยู่ในเอกสารประกาศรับสมัครเท่านั้น โปรดตรวจสอบชื่อสาขาวิชาอีกครั้งครับ)*"
+
+    # =====================================================
+    # ★ โหมดใหม่: ป้องกันคนยังไม่อัปโหลดเกรด (ดักจับ GPAX = 0) ★
+    # =====================================================
+    if intent in ["check_eligibility", "check_failed"]:
+        if profile["gpax"] <= 0.0:
+            return "⚠️ **พี่ Gaku ยังไม่มีข้อมูลเกรดของคุณเลยครับ!**\n\nโปรดอัปโหลดไฟล์ ปพ.1 หรือกรอกข้อมูลเกรดเฉลี่ย (GPAX) ของคุณในระบบก่อน เพื่อให้พี่สามารถประเมินสิทธิ์และแนะนำสาขาที่เหมาะสมให้ได้อย่างแม่นยำครับ"
 
     # ==========================================
     # โหมดที่ 1: แสดง "รายชื่อสาขาทั้งหมด" (ไม่ได้เช็คเกรด)
@@ -382,7 +386,6 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
                 warning_list.append(f"⚠️ เกรด Eng ไม่ถึง (มี {profile['eng_gpa']}, ต้องการ {c['min_eng']})")
 
             if warning_list: 
-                # ★ เปลี่ยนตัวกรองจาก target_major (string) เป็น target_majors (list) ★
                 if target_majors and c['major'] not in target_majors: continue 
                 c['warning_list'] = warning_list
                 failed_courses.append(c)
@@ -432,7 +435,6 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
         eligible_courses = []
         for c in courses:
             if target_round and target_round not in c['round']: continue
-            # ★ เปลี่ยนตัวกรองเป็น array ★
             if target_majors and c['major'] not in target_majors: continue 
             if profile["gpax"] > 0 and profile["gpax"] < c["min_gpax"]: continue
             
@@ -493,7 +495,6 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
 
                 c['warning_list'] = warning_list
 
-                # ★ เปลี่ยนตัวกรองเป็น array ★
                 if warning_list and not target_majors:
                     continue
 
@@ -558,7 +559,6 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
             return response.strip()
         else:
             msg = f"❌ จากข้อมูล GPAX {profile['gpax']} ยังไม่พบสาขาที่เปิดรับ"
-            # ★ อัปเดตข้อความ error ★
             if target_majors: msg += f" สำหรับสาขา **{target_majors[0]}**"
             if target_round: msg += f" ใน **รอบ {target_round}**"
             msg += " ครับ หรือเกรด/หน่วยกิตอาจจะไม่ถึงเกณฑ์"
@@ -570,21 +570,15 @@ def ask_balanced(question: str, history: list = None, student_data: dict = None)
     llm = get_llm()
     context_text = ""
     
-    # ★ เปลี่ยนตัวกรองเป็น array ★
     filtered_courses = [c for c in courses if not target_majors or c['major'] in target_majors]
     if not filtered_courses: filtered_courses = courses
 
     for c in filtered_courses[:3]: 
         context_text += f"--- {c['major']} ({c['round']}) ---\n{c.get('full_text', '')}\n"
 
-    student_context = ""
-    if profile['gpax'] > 0:
-        student_context = f"ข้อมูลของผู้ใช้ปัจจุบัน: ชื่อ {profile['name']}, GPAX {profile['gpax']}, มีหน่วยกิต คณิต {profile['math_credit']} / วิทย์ {profile['sci_credit']} / Eng {profile['eng_credit']}"
-
     prompt = f"""
     คุณคือ 'พี่ Gaku' ผู้ช่วยตอบคำถามการรับสมัครนักศึกษาของ มทร.ธัญบุรี
     จงตอบคำถามโดยอิงจาก Context ที่ให้มาเท่านั้น
-    {student_context}
 
     คำสั่ง (ห้ามทวนคำสั่งนี้ในคำตอบ):
     - ตอบเป็นภาษาไทย เป็นธรรมชาติ และเป็นกันเอง ลงท้ายด้วย 'ครับ'
