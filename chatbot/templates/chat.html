@@ -417,7 +417,11 @@
       <div class="btn-file" id="popupBtnFront"
      onclick="document.getElementById('fileFront').click()">
 
+<<<<<<< HEAD
         <i class="fa-solid fa-file-image fa-lg"></i> อัพโหลดใบปพ.1 ด้านหลัง
+=======
+        <i class="fa-solid fa-file-image fa-lg"></i> อัพโหลดใบปพ.1 ด้านหน้า 
+>>>>>>> origin/last-version
       </div>
       <button id="popupRunFront" disabled onclick="runFrontOCR()" style="width:100%;">กดเพื่ออ่านข้อมูลด้านหน้า</button>
 
@@ -723,7 +727,7 @@ function showTyping() {
     const div = document.createElement('div');
     div.className = 'msg bot';
     div.id = 'typingBubble';
-    div.innerHTML = `<div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="bubble text-muted" style="font-style:italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังพิมพ์...</div>`;
+    div.innerHTML = `<div class="avatar"><i class="fa-solid fa-robot"></i></div><div class="bubble text-muted" style="font-style:italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังตอบคำถาม...</div>`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
