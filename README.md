@@ -1,65 +1,44 @@
-# RMUTT CSI Admission Chatbot 🤖🎓
+# 🎓 RMUTT CSI Admission AI Chatbot (RAG System)
 
-## ✨ ฟีเจอร์หลัก
-* **AI Chatbot:** ตอบคำถามเกณฑ์การรับสมัครได้อย่างแม่นยำโดยอ้างอิงจากระเบียบการล่าสุด
-* **Transcript OCR:** รองรับการอัปโหลดใบ ปพ.1 (รูปภาพ/PDF) เพื่อดึงเกรดและตรวจสอบคุณสมบัติอัตโนมัติ
-* **Interactive UI:** หน้าจอแชทสวยงาม ใช้งานง่าย รองรับทั้ง Desktop และ Mobile
-* **Smart Context:** ระบบจดจำข้อมูลผู้ใช้ (Session) ทำให้บทสนทนาต่อเนื่อง
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
-* **Backend:** Django (Python)
-* **AI Model:** qwen2.5:1.5b (via LangChain)
-* **Vector DB:** FAISS (สำหรับระบบ RAG)
-* **OCR:** Tesseract OCR + Poppler (pdf2image)
-* **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (AJAX)
-
-## ⚙️ การติดตั้งและรันโปรเจกต์ (Installation)
-
-1.  **Clone โปรเจกต์**
-    ```bash
-    git clone [https://github.com/krittrin09/rmutt-admission-bot.git](https://github.com/krittrin09/rmutt-admission-bot.git)
-    cd rmutt-admission-bot
-    ```
-
-2.  **สร้าง Virtual Environment**
-    ```bash
-    python -m venv .venv
-    # Windows
-    .venv\Scripts\activate
-    # Mac/Linux
-    source .venv/bin/activate
-    ```
-
-3.  **ติดตั้ง Dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **ติดตั้งโปรแกรมระบบ (System Requirements)**
-    * ต้องติดตั้ง **Tesseract OCR** และ **Poppler** ลงในเครื่องก่อน (สำหรับฟีเจอร์ OCR)
-    * *Linux (Ubuntu):* `sudo apt-get install tesseract-ocr tesseract-ocr-tha poppler-utils`
-    * *Windows:* ดาวน์โหลดตัวติดตั้ง Tesseract และ Poppler และตั้งค่า Path
-
-5.  **ตั้งค่า API Key**
-    * แก้ไขไฟล์ `chatbot/rag/rag_engine.py` (หรือสร้างไฟล์ .env) เพื่อใส่ **Google Gemini API Key**
-
-6.  **สร้างฐานข้อมูลความรู้ (Ingest)**
-    ```bash
-    python chatbot/rag/ingest.py
-    ```
-
-7.  **รัน Server**
-    * **สำหรับ Dev:** `python manage.py runserver`
-    * **สำหรับ Production:**
-        ```bash
-        gunicorn admission_system.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --timeout 120
-        ```
-
-## 📂 โครงสร้างโฟลเดอร์
-* `chatbot/`: ระบบแชทและ RAG Engine
-* `ocr_app/`: ระบบอัปโหลดและประมวลผลภาพ
-* `media/`: (Local Only) ไฟล์ที่ผู้ใช้อัปโหลด
-* `templates/`: ไฟล์ HTML หลัก
+**โปรเจกต์แชทบอทอัจฉริยะสำหรับตอบคำถามระเบียบการรับสมัครนักศึกษา** พัฒนาขึ้นเพื่อช่วยให้ผู้สมัครสามารถเข้าถึงข้อมูลเกณฑ์การรับเข้าศึกษาต่อได้อย่างรวดเร็ว แม่นยำ และทำงานได้ตลอด 24 ชั่วโมง โดยประยุกต์ใช้เทคโนโลยี Generative AI ร่วมกับระบบ RAG (Retrieval-Augmented Generation) เพื่อลดการตอบคำถามผิดพลาด (Hallucination) ของ AI
 
 ---
-**Developed by:** Noah Krittrin
+
+## ✨ ฟีเจอร์หลัก (Key Features)
+
+* 🤖 **RAG-Powered AI Chatbot:** ตอบคำถามเกณฑ์การรับสมัครได้อย่างแม่นยำ โดยดึงบริบทอ้างอิงจากฐานข้อมูลเอกสารระเบียบการจริงของมหาวิทยาลัย
+* 📄 **Automated Transcript OCR:** รองรับการอัปโหลดไฟล์ใบแสดงผลการเรียน (ปพ.1) ทั้งรูปแบบรูปภาพและ PDF เพื่อดึงเกรดเฉลี่ย (GPAX) และตรวจสอบคุณสมบัติเบื้องต้นอัตโนมัติ
+* 💬 **Smart Context & Session:** ระบบจดจำบริบทการสนทนาของผู้ใช้ (Chat History) ทำให้สามารถถาม-ตอบต่อเนื่องได้อย่างเป็นธรรมชาติ
+* 📱 **Interactive & Responsive UI:** หน้าต่างแชทออกแบบให้ใช้งานง่าย สวยงาม และรองรับการแสดงผลทั้งบน Desktop และ Mobile
+
+---
+
+## 🏗️ สถาปัตยกรรมระบบ (System Architecture)
+
+* **LLM Engine:** รันโมเดล `qwen2.5:1.5b` แบบ Local ผ่าน **Ollama** (ช่วยประหยัดต้นทุนและรักษาความปลอดภัยของข้อมูล)
+* **RAG Framework:** ใช้ **LangChain** ในการจัดการ Flow ของ Prompt และเชื่อมต่อกับ **FAISS** (Vector Database) เพื่อค้นหาข้อมูลที่เกี่ยวข้องที่สุดมาตอบคำถาม
+* **OCR System:** ใช้ **Tesseract OCR** ทำงานร่วมกับ **Poppler** (pdf2image) ในการสกัดข้อความจากเอกสาร
+* **Web Framework:** พัฒนาระบบหลังบ้านและ API ด้วย **Django** พร้อมส่วนแสดงผล (Frontend) ด้วย HTML5, CSS3, Bootstrap 5 และ JavaScript (AJAX)
+
+---
+
+## ⚙️ การติดตั้งและรันโปรเจกต์ (Installation Guide)
+
+### 1. โคลนโปรเจกต์และเตรียมสภาพแวดล้อม
+```bash
+git clone [https://github.com/krittrin09/rmutt-admission-bot.git](https://github.com/krittrin09/rmutt-admission-bot.git)
+cd rmutt-admission-bot
+
+# สร้างและเปิดใช้งาน Virtual Environment
+python -m venv .venv
+
+# สำหรับ Windows
+.venv\Scripts\activate
+# สำหรับ Mac/Linux
+source .venv/bin/activate
